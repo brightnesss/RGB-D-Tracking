@@ -42,7 +42,7 @@
 function [precision, track_result ,fps] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
 
 	%path to the videos (you'll be able to choose one with the GUI).
-	base_path ='.\data';
+	base_path ='.\data\ValidationSet';
 
 	%default settings
 	if nargin < 1, video = 'choose'; end

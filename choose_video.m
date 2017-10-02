@@ -25,7 +25,7 @@ function video_name = choose_video(base_path)
 	%choice GUI
 	choice = listdlg('ListString',names, 'Name','Choose video', 'SelectionMode','single');
 	
-	if isempty(choice),  %user cancelled
+	if isempty(choice)  %user cancelled
 		video_name = [];
 	else
 		video_name = names{choice};
