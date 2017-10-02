@@ -42,10 +42,10 @@
 function [precision, track_result ,fps] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
 
 	%path to the videos (you'll be able to choose one with the GUI).
-	base_path ='.\data\ValidationSet';
+	base_path ='.\data\';
 
 	%default settings
-	if nargin < 1, video = 'choose'; end
+	if nargin < 1, video = 'all'; end
 	if nargin < 2, kernel_type = 'gaussian'; end
 	if nargin < 3, feature_type = 'hogcolor'; end
 	if nargin < 4, show_visualization = ~strcmp(video, 'all'); end
@@ -109,7 +109,8 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 	switch video
 	case 'choose'
 		%ask the user for the video, then call self with that video name.
-		video = choose_video(base_path);
+        validation_set = [base_path,'ValidationSet'];
+		video = choose_video(validation_set);
 		if ~isempty(video)
 			[precision, track_result, fps] = run_tracker(video, kernel_type, ...
 				feature_type, show_visualization, show_plots);
@@ -124,16 +125,23 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 		%all videos, call self with each video name.
 		
 		%only keep valid directory names
-		dirs = dir(base_path);
-		videos = {dirs.name};
-		videos(strcmp('.', videos) | strcmp('..', videos) | ...
-			strcmp('anno', videos) | ~[dirs.isdir]) = [];
-		
-		%the 'Jogging' sequence has 2 targets, create one entry for each.
-		%we could make this more general if multiple targets per video
-		%becomes a common occurence.
-		videos(strcmpi('Jogging', videos)) = [];
-		videos(end+1:end+2) = {'Jogging.1', 'Jogging.2'};
+%         validation_set = [base_path, 'ValidationSet'];
+        evaluation_set = [base_path, 'EvaluationSet'];
+        
+% 		dirs = dir(validation_set);
+% 		validation_videos = {dirs.name};
+% 		validation_videos(strcmp('.', validation_videos) | strcmp('..', validation_videos) | ...
+% 			strcmp('anno', validation_videos) | ~[dirs.isdir]) = [];
+%         validation_videos = strcat('ValidationSet\',validation_videos);
+        
+        dirs = dir(evaluation_set);
+        evaluation_videos = {dirs.name};
+        evaluation_videos(strcmp('.', evaluation_videos) | strcmp('..', evaluation_videos) | ...
+			strcmp('anno', evaluation_videos) | ~[dirs.isdir]) = [];
+		evaluation_videos = strcat('EvaluationSet\', evaluation_videos);
+        
+%         videos = [validation_videos,evaluation_videos]; 
+        videos = evaluation_videos;
 		
 		all_precisions = zeros(numel(videos),1);  %to compute averages
 		all_fps = zeros(numel(videos),1);

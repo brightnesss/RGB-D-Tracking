@@ -21,9 +21,18 @@ function [imgs, pos, target_sz, ground_truth, video_path] = load_video_info(base
 % 	end
 
 	%full path to the video's files
-	if base_path(end) ~= '/' && base_path(end) ~= '\'
-		base_path(end+1) = '\';
-	end
+    subvideo = regexp(video, '\', 'split');
+    if (strcmp(subvideo{1}, 'ValidationSet') || strcmp(subvideo{1}, 'EvaluationSet'))
+        if base_path(end) ~= '/' && base_path(end) ~= '\'
+            base_path(end+1) = '\';
+        end
+    else
+        if base_path(end) ~= '/' && base_path(end) ~= '\'
+            base_path = [base_path, '\ValidationSet\'];
+        else
+            base_path = [base_path, 'ValidationSet\'];
+        end
+    end
 	video_path = [base_path, video, '\'];
     
     % try to load initial position
