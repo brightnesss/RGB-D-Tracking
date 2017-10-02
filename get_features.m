@@ -20,13 +20,32 @@ function x = get_features(im, features, cell_size, cos_window,w2c)
 %   revised by: Yang Li, August, 2014
 %   http://ihpdep.github.io
 
+    if ~isstruct(features)
+        if strcmp(features,'hog')
+            feature.hog = true;
+            feature.hogcolor = false;
+            feature.gray = false;
+            feature.hog_orientations = 9;
+        elseif strcmp(features,'hogcolor')
+            feature.hog = false;
+            feature.hogcolor = true;
+            feature.gray = false;
+            feature.hog_orientations = 9;
+        elseif strcmp(features,'gray')
+            feature.hog = false;
+            feature.hogcolor = false;
+            feature.gray = true;
+        end
+        features = feature;
+    end
+            
 	if features.hog
 		%HOG features, from Piotr's Toolbox
 		x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
 		x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")
-	end
+    end
 	
-	if features.hogcolor
+    if features.hogcolor
 		%HOG features, from Piotr's Toolbox
 		x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
 		x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")

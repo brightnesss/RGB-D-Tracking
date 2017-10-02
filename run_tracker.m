@@ -45,7 +45,7 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 	base_path ='.\data\';
 
 	%default settings
-	if nargin < 1, video = 'all'; end
+	if nargin < 1, video = 'choose'; end
 	if nargin < 2, kernel_type = 'gaussian'; end
 	if nargin < 3, feature_type = 'hogcolor'; end
 	if nargin < 4, show_visualization = ~strcmp(video, 'all'); end
@@ -206,18 +206,18 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 		%we were given the name of a single video to process.
 	
 		%get image file names, initial state, and ground truth for evaluation
-		[img_files, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video);
+		[rgbdimgs, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video);
 		
 		
 		%call tracker function with all the relevant parameters
-		[positions,track_result, time] = tracker(video_path, img_files, pos, target_sz, ...
+		[positions,track_result, time] = tracker(video_path, rgbdimgs, pos, target_sz, ...
 			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
 			cell_size, features, show_visualization);
 		
 		
 		%calculate and show precision plot, as well as frames-per-second
 		precisions = precision_plot(positions, ground_truth, video, show_plots);
-		fps = numel(img_files) / time;
+		fps = numel(rgbdimgs.rgb) / time;
 
 		fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
 

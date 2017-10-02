@@ -21,8 +21,15 @@ for frameId = 1 : length
    imgs.rgb{frameId} = rgbimg;
    depthimgName = fullfile(input_str,sprintf('depth/d-%d-%d.png', frames.depthTimestamp(frameId), frames.depthFrameID(frameId)));
    depthimg = imread(depthimgName);
-   depthimg = bitor(bitshift(depthimg,-3), bitshift(depthimg,16-3));  
+   depthimg = bitor(bitshift(depthimg,-3), bitshift(depthimg,16-3)); 
+   
+   %Normalize depth data as a grayscale image [0 255]
    depthimg = double(depthimg);  
+   depthimg(depthimg==0) = 10000;
+   depthimg = (depthimg-500)/8500;%only use the data from 0.5-8m
+   depthimg(depthimg<0) = 0;
+   depthimg(depthimg>1) = 1;
+   depthimg = uint8(255*(1 - depthimg));
    imgs.depth{frameId} = depthimg;
 end
 

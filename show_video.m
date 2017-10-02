@@ -1,4 +1,4 @@
-function update_visualization_func = show_video(img_files, video_path, resize_image)
+function update_visualization_func = show_video(rgbimg, video_path, resize_image)
 %SHOW_VIDEO
 %   Visualizes a tracker in an interactive figure, given a cell array of
 %   image file names, their path, and whether to resize the images to
@@ -19,7 +19,7 @@ function update_visualization_func = show_video(img_files, video_path, resize_im
 
 
 	%store one instance per frame
-	num_frames = numel(img_files);
+	num_frames = numel(rgbimg);
 	boxes = cell(num_frames,1);
 
 	%create window
@@ -45,25 +45,23 @@ function update_visualization_func = show_video(img_files, video_path, resize_im
 
 	function redraw(frame)
 		%render main image
-		im = imread([video_path img_files{frame}]);
-% 		if size(im,3) > 1,
-% 			im = rgb2gray(im);
-% 		end
-		if resize_image,
+		im = rgbimg{frame};
+
+		if resize_image
 			im = imresize(im, 0.5);
 		end
 		
-		if isempty(im_h),  %create image
+		if isempty(im_h)  %create image
 			im_h = imshow(im, 'Border','tight', 'InitialMag',200, 'Parent',axes_h);
 		else  %just update it
 			set(im_h, 'CData', im)
 		end
 		
 		%render target bounding box for this frame
-		if isempty(rect_h),  %create it for the first time
+		if isempty(rect_h)  %create it for the first time
 			rect_h = rectangle('Position',[0,0,1,1], 'EdgeColor','g', 'Parent',axes_h);
 		end
-		if ~isempty(boxes{frame}),
+		if ~isempty(boxes{frame})
 			set(rect_h, 'Visible', 'on', 'Position', boxes{frame});
 		else
 			set(rect_h, 'Visible', 'off');
@@ -71,7 +69,7 @@ function update_visualization_func = show_video(img_files, video_path, resize_im
 	end
 
 	function on_key_press(key)
-		if strcmp(key, 'escape'),  %stop on 'Esc'
+		if strcmp(key, 'escape')  %stop on 'Esc'
 			stop_tracker = true;
 		end
 	end
