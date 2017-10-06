@@ -81,12 +81,12 @@ w2c = temp.w2crs;
     response = zeros(size(cos_window,1),size(cos_window,2),size(search_size,2));
     szid = 1;
     param1 = zeros(size(search_size,2), 6);
-    occ_flag = false;   % whether the target is occluded
-    occ_rgb_lambda1 = 0.4;  % occ_flag from false to true
-    occ_rgb_lambda2 = 0.6;  % occ_flag from true to false
-    
-    occ_depth_lambda1 = 0.4;  % occ_flag from false to true
-    occ_depth_lambda2 = 0.6;  % occ_flag from true to false
+%     occ_flag = false;   % whether the target is occluded
+%     occ_rgb_lambda1 = 0.4;  % occ_flag from false to true
+%     occ_rgb_lambda2 = 0.6;  % occ_flag from true to false
+%     
+%     occ_depth_lambda1 = 0.4;  % occ_flag from false to true
+%     occ_depth_lambda2 = 0.6;  % occ_flag from true to false
     
 %     p = gcp('nocreate');   
 %     if isempty(p)
@@ -164,13 +164,13 @@ w2c = temp.w2crs;
 			depth_response = real(ifft2(depth_model_alphaf .* depth_kzf));  %equation for fast detection
             depth_time = depth_time + toc();
             
-            % calculate occlusion paramter
-            %max response of rgb respnse map
-            occ_rgb = max(rgbmaxresponse(:));
+%             % calculate occlusion paramter
+%             %max response of rgb respnse map
+%             occ_rgb = max(rgbmaxresponse(:));
             
-            %average peak-to-correlation energy(APCE)
-            occ_depth = (max(depth_response(:)) - min(depth_response(:))) ^ 2 ...
-                / mean(mean((depth_response - min(depth_response(:))) .^ 2)); 
+%             %average peak-to-correlation energy(APCE)
+%             occ_depth = (max(depth_response(:)) - min(depth_response(:))) ^ 2 ...
+%                 / mean(mean((depth_response - min(depth_response(:))) .^ 2)); 
             
             %两种计算结果进行融合
             final_response = rgbmaxresponse + depth_response;
@@ -257,44 +257,48 @@ w2c = temp.w2crs;
             depth_model_alphaf = depth_alphaf;
             depth_model_xf = depth_xf;
         else
-            %subsequent frames, interpolate model
-            if frame == 2
-                occ_model_rgb = occ_rgb;
-                occ_model_depth = occ_depth;
-                model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
-                model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-                depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-                depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
-            else
-                if ~occ_flag % occ_flag = false
-                    occ_flag = occ_depth < occ_depth_lambda1 * occ_model_depth ...
-                        && occ_rgb < occ_rgb_lambda1 * occ_model_rgb;
-                    if ~occ_flag % occ_flag = flase
-                        model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
-                        model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-                        depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-                        depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
-                        occ_model_rgb = (1 - interp_factor) * occ_model_rgb + interp_factor * occ_rgb;
-                        occ_model_depth = (1 - interp_factor) * occ_model_depth + interp_factor * occ_depth;
-                    else
-                        % if occ_flag = true, do not update the model
-                    end
-                else % occ_flag = true
-                    re_enter_flag = occ_depth > occ_depth_lambda2 * occ_model_depth ...
-                        && occ_rgb > occ_rgb_lambda2 * occ_model_rgb;
-                    if re_enter_flag % re_enter_flag = true
-                        occ_flag = false;
-                        model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
-                        model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-                        depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-                        depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
-                        occ_model_rgb = (1 - interp_factor) * occ_model_rgb + interp_factor * occ_rgb;
-                        occ_model_depth = (1 - interp_factor) * occ_model_depth + interp_factor * occ_depth;
-                    else
-                        % if the target does not re-enter, just do nothing
-                    end
-                end
-                
+            model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
+            model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
+            depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
+            depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
+%             subsequent frames, interpolate model
+%             if frame == 2
+%                 occ_model_rgb = occ_rgb;
+%                 occ_model_depth = occ_depth;
+%                 model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
+%                 model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
+%                 depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
+%                 depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
+%             else
+%                 if ~occ_flag % occ_flag = false
+%                     occ_flag = occ_depth < occ_depth_lambda1 * occ_model_depth ...
+%                         && occ_rgb < occ_rgb_lambda1 * occ_model_rgb;
+%                     if ~occ_flag % occ_flag = flase
+%                         model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
+%                         model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
+%                         depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
+%                         depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
+%                         occ_model_rgb = (1 - interp_factor) * occ_model_rgb + interp_factor * occ_rgb;
+%                         occ_model_depth = (1 - interp_factor) * occ_model_depth + interp_factor * occ_depth;
+%                     else
+%                         % if occ_flag = true, do not update the model
+%                     end
+%                 else % occ_flag = true
+%                     re_enter_flag = occ_depth > occ_depth_lambda2 * occ_model_depth ...
+%                         && occ_rgb > occ_rgb_lambda2 * occ_model_rgb;
+%                     if re_enter_flag % re_enter_flag = true
+%                         occ_flag = false;
+%                         model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
+%                         model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
+%                         depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
+%                         depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
+%                         occ_model_rgb = (1 - interp_factor) * occ_model_rgb + interp_factor * occ_rgb;
+%                         occ_model_depth = (1 - interp_factor) * occ_model_depth + interp_factor * occ_depth;
+%                     else
+%                         % if the target does not re-enter, just do nothing
+%                     end
+%                 end
+%                 
             end
             depth_time = depth_time + toc() / 2;
             %save position and timing
