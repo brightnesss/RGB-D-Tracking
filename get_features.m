@@ -40,22 +40,22 @@ function x = get_features(im, features, cell_size, cos_window,w2c)
     end
             
 	if features.hog
-		%HOG features, from Piotr's Toolbox
-		x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
-		x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")
+        %HOG features, from Piotr's Toolbox
+        x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
+        x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")
     end
 	
     if features.hogcolor
-		%HOG features, from Piotr's Toolbox
-		x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
-		x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")
-		sz = size(x);
-		im_patch = imresize(im, [sz(1) sz(2)]);
-		out_npca = get_feature_map(im_patch, 'gray', w2c);
-		out_pca = get_feature_map(im_patch, 'cn', w2c);
-% 		out_pca = reshape(temp_pca, [prod(sz), size(temp_pca, 3)]);
-		x = cat(3,x,out_npca);
-		x = cat(3,x,out_pca);
+        %HOG features, from Piotr's Toolbox
+        x = double(fhog(single(im) / 255, cell_size, features.hog_orientations));
+        x(:,:,end) = [];  %remove all-zeros channel ("truncation feature")
+        sz = size(x);
+        im_patch = imresize(im, [sz(1) sz(2)]);
+        out_npca = get_feature_map(im_patch, 'gray', w2c);
+        out_pca = get_feature_map(im_patch, 'cn', w2c);
+        % 		out_pca = reshape(temp_pca, [prod(sz), size(temp_pca, 3)]);
+        x = cat(3,x,out_npca);
+        x = cat(3,x,out_pca);
 	end
 	
 	if features.gray

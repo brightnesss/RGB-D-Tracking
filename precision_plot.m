@@ -29,7 +29,7 @@ function precisions = precision_plot(positions, ground_truth, title, show)
 	distances = sqrt((positions(:,1) - ground_truth(:,1)).^2 + ...
 				 	 (positions(:,2) - ground_truth(:,2)).^2);
 	distances(isnan(distances)) = [];
-
+llklllll
 	%compute precisions
 	for p = 1:max_threshold
 		precisions(p) = nnz(distances <= p) / numel(distances);

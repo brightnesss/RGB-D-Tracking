@@ -85,15 +85,15 @@ response = zeros(size(cos_window,1),size(cos_window,2),size(search_size,2));
 szid = 1;
 param1 = zeros(size(search_size,2), 6);
 
-occ_rgb = 0;
-occ_depth = 0;
-occ_model_rgb = 0;
-occ_model_depth = 0;
+occ_max = 0;
+APCE = 0;
+occ_model_max = 0;
+occ_model_APCE = 0;
 occ_flag = false;   % whether the target is occluded
-occ_rgb_lambda1 = 0.4;  % occ_flag from false to true
-occ_rgb_lambda2 = 0.3;  % occ_flag from true to false
-occ_depth_lambda1 = 0.4;  % occ_flag from false to true
-occ_depth_lambda2 = 0.3;  % occ_flag from true to false
+occ_max_lambda1 = 0.4;  % occ_flag from false to true
+occ_max_lambda2 = 0.3;  % occ_flag from true to false
+occ_APCE_lambda1 = 0.4;  % occ_flag from false to true
+occ_APCE_lambda2 = 0.3;  % occ_flag from true to false
 occ_update_factor = 0.9;  % update factor for exp average algorithm
     
     
@@ -123,8 +123,13 @@ for frame = 1 : length
             param1(i,:) = [pos(2), pos(1), tmp_sz(2)/window_sz(2), 0,...
                 tmp_sz(1)/window_sz(2)/(window_sz(1)/window_sz(2)),0];
             param1(i,:) = affparam2mat(param1(i,:));
-            patch = uint8(warpimg(double(rgbim), param1(i,:), window_sz));
-            zf = fft2(get_features(patch, features, cell_size, cos_window,w2c));
+            patch_rgb = uint8(warpimg(double(rgbim), param1(i,:), window_sz));
+            patch_depth = uint8(warpimg(double(depthim), param1(i,:), window_sz));
+            x_rgb = get_features(patch_rgb, features, cell_size, cos_window,w2c);
+            x_depth = get_features(patch_depth, features, cell_size, cos_window,w2c);
+            x = x_rgb;
+            x(:,:,end+1:end+size(x_depth,3)) = x_depth;
+            zf = fft2(x);
             
             %calculate response of the classifier at all shifts
             switch kernel.type
@@ -143,78 +148,41 @@ for frame = 1 : length
         %will appear at the top-left corner, not at the center (this is
         %discussed in the paper). the responses wrap around cyclically.
         [~,tmp, ~] = find(response == max(response(:)), 1);
-        
+
         szid = floor((tmp-1)/(size(cos_window,2)))+1;
-        
-        rgbmaxresponse = response(:,:,szid);
-        
-        %再在depth通道上进行处理
-        %obtain a subwindow for detection at the position from last
-        %frame, and convert to Fourier domain (its size is given by rgb-image)
-        %             depth_patch = get_subwindow(depthim, pos, target_sz * search_size(szid));
-        %             tmp_sz = floor((target_sz * (1 + padding)) * search_size(szid));
-        %             param0 = [pos(2), pos(1), tmp_sz(2)/window_sz(2), 0,...
-        %                         tmp_sz(1)/window_sz(2)/(window_sz(1)/window_sz(2)),0];
-        %             param0 = affparam2mat(param0);
-        
-%         tic;
-        depth_patch = uint8(warpimg(double(depthim), param1(szid,:), window_sz));
-        depth_zf = fft2(get_features(depth_patch, 'hog', cell_size, cos_window));
-        %calculate response of the classifier at all shifts
-        switch kernel.type
-            case 'gaussian'
-                depth_kzf = gaussian_correlation(depth_zf, depth_model_xf, kernel.sigma);
-            case 'polynomial'
-                depth_kzf = polynomial_correlation(depth_zf, depth_model_xf, kernel.poly_a, kernel.poly_b);
-            case 'linear'
-                depth_kzf = linear_correlation(depth_zf, depth_model_xf);
-        end
-        
-        depth_response = real(ifft2(depth_model_alphaf .* depth_kzf));  %equation for fast detection
-%         depth_time = depth_time + toc();
+
+        maxresponse = response(:,:,szid);
         
         % calculate occlusion paramter
         %max response of rgb respnse map
-        occ_rgb = max(rgbmaxresponse(:));
+        occ_max = max(maxresponse(:));
         
         %average peak-to-correlation energy(APCE)
-        occ_depth = (max(depth_response(:)) - min(depth_response(:))) ^ 2 ...
-            / mean(mean((depth_response - min(depth_response(:))) .^ 2));
+        APCE = (max(maxresponse(:)) - min(maxresponse(:))) ^ 2 ...
+            / mean(mean((maxresponse - min(maxresponse(:))) .^ 2));
         
         % for test the response map
-%         if frame >= 25
-%             rgb_imshow = fftshift(response(:,:,szid));
-%             rgb_imshow_x = size(rgb_imshow,1);
-%             rgb_imshow_y = size(rgb_imshow,2);
-%             [rgb_imshow_X,rgb_imshow_Y] = meshgrid([1:rgb_imshow_x],[1:rgb_imshow_y]);
-%             rgb_imshow_Z = griddata([1:rgb_imshow_x],[1:rgb_imshow_y],rgb_imshow',rgb_imshow_X,rgb_imshow_Y);
+%         if frame >= 60
 %             f2 = figure(2);
-%             mesh(rgb_imshow_X,rgb_imshow_Y,rgb_imshow_Z);
-% 
-%             depth_imshow = fftshift(depth_response);
-%             depth_imshow_x = size(depth_imshow,1);
-%             depth_imshow_y = size(depth_imshow,2);
-%             [depth_imshow_X,depth_imshow_Y] = meshgrid([1:depth_imshow_x],[1:depth_imshow_y]);
-%             depth_imshow_Z = griddata([1:depth_imshow_x],[1:depth_imshow_y],depth_imshow',depth_imshow_X,depth_imshow_Y);
+%             imshow(fftshift(response(:,:,szid)));
+%             set(f2,'position',[300,300,600,600]);
 %             f3 = figure(3);
-%             mesh(depth_imshow_X,depth_imshow_Y,depth_imshow_Z);
-% %             f4 = figure(4);
-% %             imshow(fftshift(final_response));
-% %             set(f4,'position',[900,300,600,600]);
-% %             pause;
+%             imshow(fftshift(depth_response));
+%             set(f3,'position',[700,300,600,600]);
+%             f4 = figure(4);
+%             imshow(fftshift(final_response));
+%             set(f4,'position',[900,300,600,600]);
+%             pause;
 %         end
         
         % if occ_flag = true, do not need to update pos and target
         if ~occ_flag
             
-            %两种计算结果进行融合
-            final_response = rgbmaxresponse + depth_response;
-            
             %target location is at the maximum response. we must take into
             %account the fact that, if the target doesn't move, the peak
             %will appear at the top-left corner, not at the center (this is
             %discussed in the paper). the responses wrap around cyclically.
-            [vert_delta, horiz_delta] = find(final_response == max(final_response(:)), 1);
+            [vert_delta, horiz_delta] = find(maxresponse == max(maxresponse(:)), 1);
             if vert_delta > size(zf,1) / 2  %wrap around to negative half-space of vertical axis
                 vert_delta = vert_delta - size(zf,1);
             end
@@ -249,33 +217,25 @@ for frame = 1 : length
             param0 = affparam2mat(param0);
         end
         
-        patch = uint8(warpimg(double(rgbim), param0, window_sz));
+        patch_rgb = uint8(warpimg(double(rgbim), param0, window_sz));
+        patch_depth = uint8(warpimg(double(depthim), param0, window_sz));
         %为了统一hog和cn的维度，以hog的维度为准，将patch降维到hog特征维度
-        x = get_features(patch, features, cell_size, cos_window,w2c);
+        x_rgb = get_features(patch_rgb, features, cell_size, cos_window,w2c);
+        x_depth = get_features(patch_depth, features, cell_size, cos_window,w2c);
+        x = x_rgb;
+        x(:,:,end+1:end+size(x_depth,3)) = x_depth;
         xf = fft2(x);
-        
-        % 处理深度图,采用KCF那一套写法,默认采用hog特征
-        % depth_patch = get_subwindow(depthim, pos, target_sz);
-%         tic;
-        depth_patch = uint8(warpimg(double(depthim), param0, window_sz));
-        depth_xf = fft2(get_features(depth_patch, 'hog', cell_size, cos_window, 0));
         
         %Kernel Ridge Regression, calculate alphas (in Fourier domain)
         switch kernel.type
             case 'gaussian'
                 kf = gaussian_correlation(xf, xf, kernel.sigma);
-                depth_kf = gaussian_correlation(depth_xf, depth_xf, kernel.sigma);
             case 'polynomial'
                 kf = polynomial_correlation(xf, xf, kernel.poly_a, kernel.poly_b);
-                depth_kf = polynomial_correlation(depth_xf, depth_xf, kernel.poly_a, kernel.poly_b);
             case 'linear'
                 kf = linear_correlation(xf, xf);
-                depth_kf = linear_correlation(depth_xf, depth_xf);
         end
         alphaf = yf ./ (kf + lambda);   %equation for fast training
-        depth_alphaf = yf ./ (depth_kf + lambda);
-        
-%         depth_time = depth_time + toc() / 2;
         
     end % end if occ_flag
     
@@ -284,32 +244,24 @@ for frame = 1 : length
     if frame == 1  %first frame, train with a single image
         model_alphaf = alphaf;
         model_xf = xf;
-        depth_model_alphaf = depth_alphaf;
-        depth_model_xf = depth_xf;
     else
         model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
         model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-        depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-        depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
         %           subsequent frames, interpolate model
         if frame == 2
-            occ_model_rgb = occ_rgb;
-            occ_model_depth = occ_depth;
+            occ_model_max = occ_max;
+            occ_model_APCE = APCE;
             model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
             model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-            depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-            depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
         else
             if ~occ_flag % occ_flag = false
-                occ_flag = occ_depth < occ_depth_lambda1 * occ_model_depth ...
-                    && occ_rgb < occ_rgb_lambda1 * occ_model_rgb;
+                occ_flag = APCE < occ_APCE_lambda1 * occ_model_APCE ...
+                    && occ_max < occ_max_lambda1 * occ_model_max;
                 if ~occ_flag % occ_flag = flase
                     model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
                     model_xf = (1 - interp_factor) * model_xf + interp_factor * xf;
-                    depth_model_alphaf = (1 - interp_factor) * depth_model_alphaf + interp_factor * depth_alphaf;
-                    depth_model_xf = (1 - interp_factor) * depth_model_xf + interp_factor * depth_xf;
-                    occ_model_rgb = occ_update_factor * occ_model_rgb + (1 - occ_update_factor) * occ_rgb;
-                    occ_model_depth = occ_update_factor * occ_model_depth + (1 - occ_update_factor) * occ_depth;
+                    occ_model_max = occ_update_factor * occ_model_max + (1 - occ_update_factor) * occ_max;
+                    occ_model_APCE = occ_update_factor * occ_model_APCE + (1 - occ_update_factor) * APCE;
                 else
                     % if occ_flag = true, do not update the model
                     %                         occ_model_rgb = occ_update_factor * occ_model_rgb + (1 - occ_update_factor) * occ_rgb;
@@ -317,8 +269,8 @@ for frame = 1 : length
                 end
                 
             else % occ_flag = true
-                re_enter_flag = occ_depth > occ_depth_lambda2 * occ_model_depth ...
-                    && occ_rgb > occ_rgb_lambda2 * occ_model_rgb;
+                re_enter_flag = APCE > occ_APCE_lambda2 * occ_model_APCE ...
+                    && occ_max > occ_max_lambda2 * occ_model_max;
                 if re_enter_flag % re_enter_flag = true
                     occ_flag = false;
                     %                         model_alphaf = (1 - interp_factor) * model_alphaf + interp_factor * alphaf;
@@ -342,7 +294,7 @@ for frame = 1 : length
     
 %     depth_time = depth_time + toc() / 2;
     %save position and timing
-    time = time + toc() / 2;
+    time = time + toc();
     positions(frame,:) = pos;
 %     total_time = etime(clock,t0);
 %     time = time + total_time - depth_time;

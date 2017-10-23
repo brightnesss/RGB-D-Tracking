@@ -1,4 +1,4 @@
-function [imgs, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video)
+function [imgs, pos, target_sz, ground_truth_position, ground_truth, video_path] = load_video_info(base_path, video)
 %LOAD_VIDEO_INFO
 %   Loads all the relevant information for the video in the given path:
 %   the list of image files (cell array of strings), initial position
@@ -64,18 +64,25 @@ function [imgs, pos, target_sz, ground_truth, video_path] = load_video_info(base
 % 	assert(f ~= -1, ['No initial position or ground truth to load ("' filename '").'])
 	
 	%the format is [x, y, width, height]
-	try
-		ground_truth = textscan(f, '%f,%f,%f,%f,%f', 'Delimiter', ',','ReturnOnError',false);  
-	catch  %#ok try different format (no commas)
-		frewind(f);
-		ground_truth = textscan(f, '%f,%f,%f,%f,%f');
-	end
-	ground_truth = cat(2, ground_truth{:});
-	fclose(f);
-	
-	%store positions instead of boxes
-    ground_truth = ground_truth(:, 1:4);
-	ground_truth = ground_truth(:,[2,1]) + ground_truth(:,[4,3]) / 2;
+    if f ~= -1
+        try
+            ground_truth = textscan(f, '%f,%f,%f,%f,%f', 'Delimiter', ',','ReturnOnError',false);
+        catch  %#ok try different format (no commas)
+            frewind(f);
+            ground_truth = textscan(f, '%f,%f,%f,%f,%f');
+        end
+        ground_truth = cat(2, ground_truth{:});
+        fclose(f);
+        
+        %store boxes
+        ground_truth = ground_truth(:, 1:4);
+        
+        %store positions instead of boxes
+        ground_truth_position = ground_truth(:, 1:4);
+        ground_truth_position = ground_truth_position(:,[2,1]) + ground_truth_position(:,[4,3]) / 2;
+    else
+        ground_truth_position = [];
+    end
 	
 	%from now on, load all the RGB images and DEPTH images using
 	%rgbdimgread

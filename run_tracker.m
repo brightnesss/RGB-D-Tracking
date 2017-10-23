@@ -39,7 +39,7 @@
 %   revised by: Yang Li, August, 2014
 %   http://ihpdep.github.io
 
-function [precision, track_result ,fps] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
+function [precision, track_result ,fps, successes, success_auc] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
 
 	%path to the videos (you'll be able to choose one with the GUI).
 	base_path ='.\data\';
@@ -77,7 +77,7 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 		cell_size = 1;
 		
 	case 'hog'
-		interp_factor = 0.015;
+		interp_factor = 0.02;
 		
 		kernel.sigma = 0.5;
 		
@@ -112,7 +112,7 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
         validation_set = [base_path,'ValidationSet'];
 		video = choose_video(validation_set);
 		if ~isempty(video)
-			[precision, track_result, fps] = run_tracker(video, kernel_type, ...
+			[precision, track_result, fps, successes, success_auc ] = run_tracker(video, kernel_type, ...
 				feature_type, show_visualization, show_plots);
 			
 			if nargout == 0  %don't output precision as an argument
@@ -143,36 +143,46 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 %         videos = [validation_videos,evaluation_videos]; 
         videos = evaluation_videos;
 		
-		all_precisions = zeros(numel(videos),1);  %to compute averages
+% 		all_precisions = zeros(numel(videos),1);  %to compute averages
 		all_fps = zeros(numel(videos),1);
+        
+        for k = 1:numel(videos)
+            fprintf(['video %d: ', videos{k}, ' is going to run\n'], k);
+            [~, ~, all_fps(k)] = run_tracker(videos{k}, ...
+                kernel_type, feature_type, false, false);
+        end
 		
-		if ~exist('parpool', 'file')
-			%no parallel toolbox, use a simple 'for' to iterate
-			for k = 1:numel(videos)
-				[all_precisions(k), all_fps(k)] = run_tracker(videos{k}, ...
-					kernel_type, feature_type, show_visualization, show_plots);
-			end
-		else
-			%evaluate trackers for all videos in parallel
-            
-            p = gcp('nocreate');   
-            if isempty(p)
-                parpool('local');
-            end
-            
-			parfor k = 1:numel(videos)
-				[all_precisions(k), all_fps(k)] = run_tracker(videos{k}, ...
-					kernel_type, feature_type, show_visualization, show_plots);
-			end
-		end
+% 		if ~exist('parpool', 'file')
+% 			%no parallel toolbox, use a simple 'for' to iterate
+% 			for k = 1:numel(videos)
+%                 fprintf(['video %d: ', videos{k}, ' is going to run\n'], k);
+% 				[all_precisions(k), all_fps(k)] = run_tracker(videos{k}, ...
+% 					kernel_type, feature_type, show_visualization, show_plots);
+% 			end
+% 		else
+% 			%evaluate trackers for all videos in parallel
+%             
+%             p = gcp('nocreate');   
+%             if isempty(p)
+%                 parpool('local');
+%             end
+%             
+% 			parfor k = 1:numel(videos)
+%                 fprintf(['video %d: ', videos{k}, ' is going to run\n'], k);
+% 				[all_precisions(k), all_fps(k)] = run_tracker(videos{k}, ...
+% 					kernel_type, feature_type, show_visualization, show_plots);
+% 			end
+% 		end
 		
 		%compute average precision at 20px, and FPS
-		mean_precision = mean(all_precisions);
+% 		mean_precision = mean(all_precisions);
 		fps = mean(all_fps);
-		fprintf('\nAverage precision (20px):% 1.3f, Average FPS:% 4.2f\n\n', mean_precision, fps)
-		if nargout > 0
-			precision = mean_precision;
-		end
+        precision = [];
+        track_result = [];
+% 		fprintf('\nAverage precision (20px):% 1.3f, Average FPS:% 4.2f\n\n', mean_precision, fps)
+% 		if nargout > 0
+% 			precision = mean_precision;
+% 		end
 		
 		
 	case 'benchmark'
@@ -206,25 +216,36 @@ function [precision, track_result ,fps] = run_tracker(video, kernel_type, featur
 		%we were given the name of a single video to process.
 	
 		%get image file names, initial state, and ground truth for evaluation
-		[rgbdimgs, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video);
+		[rgbdimgs, pos, target_sz, ground_truth_position, ground_truth, video_path] = load_video_info(base_path, video);
 		
 		
 		%call tracker function with all the relevant parameters
-		[positions,track_result, time] = tracker(video_path, rgbdimgs, pos, target_sz, ...
+		[positions,track_result, time, occ_results] = tracker(video_path, rgbdimgs, pos, target_sz, ...
 			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
 			cell_size, features, show_visualization);
 		
 		
 		%calculate and show precision plot, as well as frames-per-second
-		precisions = precision_plot(positions, ground_truth, video, show_plots);
-		fps = numel(rgbdimgs.rgb) / time;
-
-		fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
-
-		if nargout > 0
-			%return precisions at a 20 pixels threshold
-			precision = precisions(20);
-		end
+        fps = numel(rgbdimgs.rgb) / time;
+        if show_plots
+            precisions = precision_plot(positions, ground_truth_position, video, show_plots);
+            fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
+            [success,auc] = success_plot(track_result, ground_truth, video, show_plots);
+            if nargout > 0
+                %return precisions at a 20 pixels threshold
+                precision = precisions;
+                successes = success;
+                success_auc = auc;
+            end
+        else
+            precision = [];
+            successes = [];
+            success_auc = [];
+        end
+        
+%         result_path = [base_path, 'Result\', video, '.txt'];
+%         
+%         write_result(result_path, track_result, occ_results);
 
 	end
 end
