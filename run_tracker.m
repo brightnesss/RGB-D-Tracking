@@ -220,25 +220,25 @@ function [precision, track_result ,fps, successes, success_auc] = run_tracker(vi
 		
 		
 % 		%call tracker function with all the relevant parameters
-% 		[positions,track_result, time, occ_results] = tracker(video_path, rgbdimgs, pos, target_sz, ...
-% 			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
-% 			cell_size, features, show_visualization);
+		[positions,track_result, time, occ_results] = tracker(video_path, rgbdimgs, pos, target_sz, ...
+			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
+			cell_size, features, show_visualization);
         
         %call tracker function with all the relevant parameters
 %         [positions,track_result, time, occ_results] = rgbtracker(video_path, rgbdimgs, pos, target_sz, ...
 %             padding, kernel, lambda, output_sigma_factor, interp_factor, ...
 %             cell_size, features, show_visualization);
 		
-        [positions,track_result, time] = samf_tracker(video_path, rgbdimgs, pos, target_sz, ...
-            padding, kernel, lambda, output_sigma_factor, interp_factor, ...
-            cell_size, features, show_visualization);
+%         [positions,track_result, time] = samf_tracker(video_path, rgbdimgs, pos, target_sz, ...
+%             padding, kernel, lambda, output_sigma_factor, interp_factor, ...
+%             cell_size, features, show_visualization);
 		
 		%calculate and show precision plot, as well as frames-per-second
         fps = numel(rgbdimgs.rgb) / time;
         if show_plots
-            precisions = precision_plot(positions, ground_truth_position, video, show_plots);
-            fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
-            [success,auc] = success_plot(track_result, ground_truth, video, show_plots);
+            precisions = precision_plot(positions, ground_truth_position, video, 0);
+%             fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
+            [success,auc] = success_plot(track_result, ground_truth, video, 0);
             if nargout > 0
                 %return precisions at a 20 pixels threshold
                 precision = precisions;
